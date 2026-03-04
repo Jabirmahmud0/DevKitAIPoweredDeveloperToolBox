@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as Comlink from "comlink";
-import { useCompletion } from "ai/react";
-import { Wand2, BookOpen, Flag, AlertTriangle, RefreshCw } from "lucide-react";
+import { Wand2, BookOpen, Flag, AlertTriangle, RefreshCw, CheckCircle, Copy } from "lucide-react";
 import { useToolStore } from "@/lib/stores/useToolStore";
 import type { RegexResult, MatchGroup } from "@/lib/workers/regex.worker";
 
@@ -54,7 +53,6 @@ function buildHighlightedHtml(text: string, matches: MatchResult[]): string {
 }
 
 export default function RegexLab() {
-    const { globalModel } = useToolStore();
     const [pattern, setPattern] = useState("\\b\\w{4,}\\b");
     const [flags, setFlags] = useState<Set<string>>(new Set(["g", "i"]));
     const [testString, setTestString] = useState(
@@ -65,10 +63,12 @@ export default function RegexLab() {
     const [execTime, setExecTime] = useState<number | null>(null);
     const [aiMode, setAiMode] = useState<"explain" | "generate">("explain");
     const [aiPrompt, setAiPrompt] = useState("");
+    const [aiResponse, setAiResponse] = useState("");
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
+    
     const workerRef = useRef<Worker | null>(null);
     const regexApiRef = useRef<any>(null);
-
-    const { complete, completion, isLoading: aiLoading } = useCompletion({ api: "/api/ai/regex" });
 
     // Initialize Web Worker
     useEffect(() => {
@@ -81,7 +81,11 @@ export default function RegexLab() {
 
     // Run regex using Web Worker
     const runRegex = useCallback(async () => {
-        if (!pattern || !regexApiRef.current) { setMatches([]); setError(null); return; }
+        if (!pattern || !regexApiRef.current) { 
+            setMatches([]); 
+            setError(null); 
+            return; 
+        }
         try {
             const flagStr = [...flags].join("");
             const result: RegexResult = await regexApiRef.current.runRegex(pattern, flagStr, testString);
@@ -91,13 +95,12 @@ export default function RegexLab() {
                 setMatches([]);
                 setExecTime(null);
             } else {
-                // Convert worker result to local MatchResult format
-                const convertedMatches: MatchResult[] = result.matches.map((m) => ({
+                const convertedMatches: MatchResult[] = result.matches.map((m: any) => ({
                     fullMatch: m.fullMatch,
                     start: m.start,
                     end: m.end,
                     index: m.index,
-                    groups: m.groups.map((g) => ({ name: g.name, value: g.value })),
+                    groups: m.groups.map((g: any) => ({ name: g.name, value: g.value })),
                 }));
                 setMatches(convertedMatches);
                 setError(null);
@@ -122,13 +125,90 @@ export default function RegexLab() {
         });
     }
 
-    function handleAI() {
-        if (aiMode === "explain") {
-            complete("", { body: { pattern, mode: "explain", model: globalModel } });
-        } else {
-            complete("", { body: { description: aiPrompt, mode: "generate", model: globalModel } });
+    const handleAI = useCallback(async () => {
+        setIsAiLoading(true);
+        setAiResponse("");
+        setError(null);
+        
+        try {
+            const response = await fetch("/api/ai/regex", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pattern: aiMode === "explain" ? pattern : undefined,
+                    mode: aiMode,
+                    description: aiMode === "generate" ? aiPrompt : undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ error: "Request failed" }));
+                throw new Error(errData.error || `HTTP ${response.status}`);
+            }
+
+            // Read streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            
+            if (!reader) throw new Error("No response body");
+
+            let accumulatedText = "";
+            let buffer = "";
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+                
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) continue;
+                    
+                    if (trimmedLine.startsWith("0:")) {
+                        try {
+                            const data = JSON.parse(trimmedLine.slice(2));
+                            if (data.textDelta) {
+                                accumulatedText += data.textDelta;
+                                setAiResponse(accumulatedText);
+                            }
+                        } catch {
+                            if (trimmedLine.length > 2) {
+                                accumulatedText += trimmedLine.slice(2);
+                                setAiResponse(accumulatedText);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : "Unknown error";
+            setError(errMsg);
+            console.error("[Regex AI Error]:", err);
+        } finally {
+            setIsAiLoading(false);
         }
-    }
+    }, [aiMode, pattern, aiPrompt]);
+
+    const handleCopyResponse = useCallback(() => {
+        if (!aiResponse) return;
+        navigator.clipboard.writeText(aiResponse);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    }, [aiResponse]);
+
+    const handleCopyPatternOnly = useCallback(() => {
+        if (!aiResponse) return;
+        // Extract first line (the regex pattern)
+        const firstLine = aiResponse.split('\n')[0].trim();
+        navigator.clipboard.writeText(firstLine);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    }, [aiResponse]);
 
     const highlightedHtml = buildHighlightedHtml(testString, matches);
 
@@ -179,27 +259,27 @@ export default function RegexLab() {
                 </div>
 
                 {/* Test String */}
-                <div className="flex-1 flex flex-col min-h-0 p-4 gap-3">
-                    <div className="flex-1 min-h-0">
+                <div className="flex-1 flex flex-col min-h-0 p-4 gap-3 overflow-hidden">
+                    <div className="flex-1 min-h-0 flex flex-col">
                         <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Test String</label>
                         <textarea
                             value={testString}
                             onChange={(e) => setTestString(e.target.value)}
-                            className="w-full h-full resize-none bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl p-3 font-mono text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                            className="flex-1 w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl p-3 font-mono text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors resize-none overflow-auto"
                         />
                     </div>
 
                     {/* Highlighted Preview */}
-                    <div>
+                    <div className="flex-shrink-0">
                         <label className="text-xs text-[var(--text-muted)] mb-1.5 block">Match Preview</label>
                         <div
-                            className="w-full min-h-[60px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl p-3 font-mono text-sm text-[var(--text-primary)] whitespace-pre-wrap break-words"
+                            className="w-full max-h-[120px] min-h-[60px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl p-3 font-mono text-sm text-[var(--text-primary)] whitespace-pre-wrap break-words overflow-auto"
                             dangerouslySetInnerHTML={{ __html: highlightedHtml }}
                         />
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                    <div className="flex-shrink-0 flex items-center gap-4 text-xs text-[var(--text-muted)]">
                         <span>{matches.length} match{matches.length !== 1 ? "es" : ""}</span>
                         {execTime !== null && <span>{execTime.toFixed(2)}ms</span>}
                     </div>
@@ -229,12 +309,12 @@ export default function RegexLab() {
                 </div>
 
                 {/* AI Panel */}
-                <div className="flex-1 p-3 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
+                <div className="flex-1 p-3 flex flex-col gap-3 min-h-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         <Wand2 size={13} className="text-[var(--accent)]" />
                         <span className="text-xs font-semibold text-[var(--text-secondary)]">AI Assistant</span>
                     </div>
-                    <div className="flex gap-1 bg-[var(--bg-elevated)] rounded-lg p-1">
+                    <div className="flex gap-1 bg-[var(--bg-elevated)] rounded-lg p-1 flex-shrink-0">
                         {(["explain", "generate"] as const).map((mode) => (
                             <button
                                 key={mode}
@@ -254,22 +334,56 @@ export default function RegexLab() {
                             value={aiPrompt}
                             onChange={(e) => setAiPrompt(e.target.value)}
                             placeholder="Describe what to match..."
-                            className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--accent)] transition-colors"
+                            className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--accent)] transition-colors flex-shrink-0"
                         />
                     )}
                     <button
                         onClick={handleAI}
-                        disabled={aiLoading || (aiMode === "generate" && !aiPrompt)}
-                        className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-40"
+                        disabled={isAiLoading || (aiMode === "generate" && !aiPrompt)}
+                        className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition-all disabled:opacity-40 flex-shrink-0"
                         style={{ background: "var(--accent)", color: "white" }}
                     >
-                        {aiLoading ? <RefreshCw size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                        {isAiLoading ? <RefreshCw size={12} className="animate-spin" /> : <Wand2 size={12} />}
                         {aiMode === "explain" ? "Explain Pattern" : "Generate Regex"}
                     </button>
-                    {completion && (
-                        <div className="flex-1 overflow-y-auto text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap font-mono bg-[var(--bg-elevated)] rounded-xl p-3">
-                            {completion}
-                            {aiLoading && <span className="animate-blink text-[var(--accent)]">▌</span>}
+                    
+                    {/* AI Response Display */}
+                    {(aiResponse || isAiLoading) && (
+                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                            <div className="flex items-center justify-between mb-1 flex-shrink-0">
+                                <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold">
+                                    {isAiLoading ? "Generating..." : "Response"}
+                                </span>
+                                {aiResponse && !isAiLoading && (
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={handleCopyPatternOnly}
+                                            className="p-1 rounded hover:bg-[var(--bg-elevated)] transition-colors flex items-center gap-1 text-[10px] text-[var(--accent)]"
+                                            title="Copy pattern only (first line)"
+                                        >
+                                            <Copy size={10} /> Pattern
+                                        </button>
+                                        <button
+                                            onClick={handleCopyResponse}
+                                            className="p-1 rounded hover:bg-[var(--bg-elevated)] transition-colors"
+                                            title="Copy full response"
+                                        >
+                                            {copySuccess ? <CheckCircle size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 overflow-y-auto text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap font-mono bg-[var(--bg-elevated)] rounded-xl p-3">
+                                {aiResponse}
+                                {isAiLoading && <span className="animate-blink text-[var(--accent)]">▌</span>}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {!aiResponse && !isAiLoading && (
+                        <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] text-xs text-center gap-2 p-4">
+                            <Wand2 size={24} className="opacity-30" />
+                            <span>Click "Explain Pattern" or "Generate Regex" to get AI help</span>
                         </div>
                     )}
                 </div>
