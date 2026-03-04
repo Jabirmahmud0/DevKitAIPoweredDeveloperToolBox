@@ -1,0 +1,293 @@
+"use client";
+
+import { useState, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
+import { Play, Copy, Download, AlertTriangle, CheckCircle, Info, Zap, RefreshCw } from "lucide-react";
+import { useToolStore } from "@/lib/stores/useToolStore";
+import { addHistoryEntry } from "@/lib/db";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+    ssr: false,
+    loading: () => <div className="skeleton w-full h-full rounded-lg" />,
+});
+
+const LANGUAGE_OPTIONS = [
+    "javascript", "typescript", "python", "go", "rust", "java", "cpp",
+    "csharp", "php", "ruby", "swift", "kotlin", "sql", "html", "css",
+    "json", "yaml", "markdown", "bash", "dockerfile",
+];
+
+export default function CodeReviewer() {
+    const { fontSize, editorTheme } = useToolStore();
+    const [code, setCode] = useState(`// Paste your code here for AI review
+function processUserData(users) {
+  let result = [];
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].age > 18) {
+      result.push(users[i].name);
+    }
+  }
+  return result;
+}`);
+    const [language, setLanguage] = useState("javascript");
+    const [review, setReview] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const handleReview = useCallback(async () => {
+        if (!code.trim()) return;
+        
+        setIsLoading(true);
+        setReview("");
+        setError(null);
+        
+        abortControllerRef.current = new AbortController();
+        
+        try {
+            const response = await fetch("/api/ai/review", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code, language }),
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ error: "Request failed" }));
+                throw new Error(errData.error || errData.message || `HTTP ${response.status}`);
+            }
+
+            // Read streaming response
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            
+            if (!reader) throw new Error("No response body");
+
+            let accumulatedText = "";
+            let buffer = "";
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+                
+                // Process complete lines
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || ""; // Keep incomplete line in buffer
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) continue;
+                    
+                    // Vercel AI SDK format: "0:{...}" or "d:{...}"
+                    if (trimmedLine.startsWith("0:")) {
+                        try {
+                            const data = JSON.parse(trimmedLine.slice(2));
+                            if (data.textDelta) {
+                                accumulatedText += data.textDelta;
+                                setReview(accumulatedText);
+                            }
+                        } catch (e) {
+                            // Try parsing as plain text if JSON fails
+                            if (trimmedLine.length > 2) {
+                                accumulatedText += trimmedLine.slice(2);
+                                setReview(accumulatedText);
+                            }
+                        }
+                    } else if (trimmedLine.startsWith("d:")) {
+                        // Done message - ignore
+                        break;
+                    } else {
+                        // Fallback: treat as plain text
+                        accumulatedText += trimmedLine + "\n";
+                        setReview(accumulatedText);
+                    }
+                }
+            }
+            
+            // Save to history
+            await addHistoryEntry({
+                toolId: "code-reviewer",
+                input: { code, language },
+                output: accumulatedText,
+                label: `${language} — ${code.slice(0, 40).replace(/\n/g, " ")}...`,
+            });
+            
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === "AbortError") {
+                console.log("Review cancelled");
+            } else {
+                const errMsg = err instanceof Error ? err.message : "Unknown error";
+                setError(errMsg);
+                console.error("[Code Review Error]:", err);
+            }
+        } finally {
+            setIsLoading(false);
+            abortControllerRef.current = null;
+        }
+    }, [code, language]);
+
+    const handleStop = useCallback(() => {
+        abortControllerRef.current?.abort();
+        setIsLoading(false);
+    }, []);
+
+    const handleCopy = useCallback(async () => {
+        if (!review) return;
+        await navigator.clipboard.writeText(review);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    }, [review]);
+
+    const handleExport = useCallback(() => {
+        if (!review) return;
+        const blob = new Blob([`# Code Review\n\n\`\`\`${language}\n${code}\n\`\`\`\n\n## AI Review\n\n${review}`], {
+            type: "text/markdown",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `code-review-${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [code, language, review]);
+
+    return (
+        <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+            {/* LEFT — Code Editor */}
+            <div className="flex flex-col flex-1 min-h-0 border-r border-[var(--border)]">
+                {/* Toolbar */}
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--border)] bg-[var(--bg-surface)] flex-shrink-0">
+                    <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent)] transition-colors"
+                    >
+                        {LANGUAGE_OPTIONS.map((l) => (
+                            <option key={l} value={l}>{l}</option>
+                        ))}
+                    </select>
+
+                    <div className="flex-1" />
+
+                    <button
+                        onClick={isLoading ? handleStop : handleReview}
+                        disabled={!code.trim()}
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40"
+                        style={{
+                            background: isLoading ? "var(--danger)" : "var(--accent)",
+                            color: "white",
+                            boxShadow: isLoading ? "none" : "0 0 12px var(--accent-glow)",
+                        }}
+                    >
+                        {isLoading ? (
+                            <><RefreshCw size={14} className="animate-spin" /> Stop</>
+                        ) : (
+                            <><Play size={14} /> Review Code</>
+                        )}
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden">
+                    <MonacoEditor
+                        height="100%"
+                        language={language}
+                        value={code}
+                        onChange={(v) => setCode(v ?? "")}
+                        theme={editorTheme}
+                        options={{
+                            fontSize,
+                            minimap: { enabled: false },
+                            wordWrap: "on",
+                            lineNumbers: "on",
+                            scrollBeyondLastLine: false,
+                            padding: { top: 12, bottom: 12 },
+                            fontFamily: "var(--font-geist-mono), 'Fira Code', monospace",
+                            fontLigatures: true,
+                            cursorBlinking: "smooth",
+                            smoothScrolling: true,
+                            renderLineHighlight: "gutter",
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* RIGHT — Review Panel */}
+            <div className="flex flex-col w-full lg:w-[420px] min-h-0 bg-[var(--bg-surface)]">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Zap size={14} className="text-[var(--accent)]" />
+                        <span className="text-sm font-medium text-[var(--text-primary)]">AI Review</span>
+                        {isLoading && (
+                            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                                <span className="animate-blink">▌</span> Analyzing...
+                            </span>
+                        )}
+                    </div>
+                    {review && !isLoading && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={handleCopy}
+                                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
+                                title="Copy review"
+                            >
+                                {copySuccess ? <CheckCircle size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
+                                title="Export as Markdown"
+                            >
+                                <Download size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4">
+                    {error && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                            <strong>Error:</strong> {error}
+                        </div>
+                    )}
+                    
+                    {!review && !isLoading && !error && (
+                        <div className="flex flex-col items-center gap-3 py-16 text-[var(--text-muted)]">
+                            <div
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                                style={{ background: "var(--accent-glow)" }}
+                            >
+                                <Zap size={24} className="text-[var(--accent)]" />
+                            </div>
+                            <span className="text-sm font-medium">Ready to Review</span>
+                            <span className="text-xs text-center max-w-[200px] leading-relaxed">
+                                Paste your code and click <strong>Review Code</strong> to get AI feedback on security, performance, and best practices.
+                            </span>
+                            <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
+                                {["Security", "Performance", "Best Practices", "Bugs"].map((tag) => (
+                                    <span
+                                        key={tag}
+                                        className="text-xs px-2 py-0.5 rounded-full"
+                                        style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
+                                    >
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(review || isLoading) && (
+                        <div className="streaming-text text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
+                            {review}
+                            {isLoading && <span className="animate-blink text-[var(--accent)]">▌</span>}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
