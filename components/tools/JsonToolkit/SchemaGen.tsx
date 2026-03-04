@@ -35,10 +35,13 @@ export default function SchemaGen() {
                 body: JSON.stringify({ json, model: globalModel }),
             });
 
-            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
 
-            const { code } = await res.json();
-            setSchema(code);
+            if (!res.ok) {
+                throw new Error(data.error || data.details || "Failed to generate schema");
+            }
+
+            setSchema(data.code || "");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to generate schema");
         } finally {
