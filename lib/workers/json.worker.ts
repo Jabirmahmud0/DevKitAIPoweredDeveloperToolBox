@@ -2,7 +2,7 @@
 // Used via Comlink from JsonToolkit component
 
 import * as Comlink from "comlink";
-import { diffJson } from "jsdiff";
+import { diffJson } from "diff";
 
 export interface DiffLine {
     value: string;
@@ -36,10 +36,7 @@ function runDiff(left: string, right: string): DiffResult {
             };
         }
 
-        const changes = diffJson(
-            leftObj as object,
-            rightObj as object
-        );
+        const changes = diffJson(leftObj as object, rightObj as object);
 
         let additions = 0;
         let removals = 0;
