@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Play, Plus, Trash2, Wand2, RefreshCcw, Activity, Loader2 } from "lucide-react";
-import { useCompletion } from "ai/react";
 import { useToolStore } from "@/lib/stores/useToolStore";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -34,27 +33,48 @@ export default function ApiTester() {
     // AI Assistant
     const [aiPrompt, setAiPrompt] = useState("");
     const [showAi, setShowAi] = useState(false);
+    const [isAiLoading, setIsAiLoading] = useState(false);
 
-    const { complete, isLoading: aiLoading } = useCompletion({
-        api: "/api/ai/api-builder",
-        onFinish: (_, result) => {
-            try {
-                let clean = result.replace(/```(json)?/g, "").trim();
-                const data = JSON.parse(clean);
-                if (data.method) setMethod(data.method);
-                if (data.url) setUrl(data.url);
-                if (data.headers) setHeaders(data.headers.map((h: any, i: number) => ({ id: `h${i}`, ...h })));
-                if (data.params) setParams(data.params.map((p: any, i: number) => ({ id: `p${i}`, ...p })));
-                if (data.body) {
-                    setBody(typeof data.body === "string" ? data.body : JSON.stringify(data.body, null, 2));
-                    setActiveTab("body");
-                }
-                setShowAi(false);
-            } catch (e) {
-                console.error("Failed to parse AI response:", result);
+    const callAiBuilder = async () => {
+        if (!aiPrompt) return;
+        setIsAiLoading(true);
+        try {
+            const res = await fetch("/api/ai/api-builder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: aiPrompt })
+            });
+
+            if (!res.ok) {
+                throw new Error(`AI request failed: ${res.status}`);
             }
+
+            const text = await res.text();
+            
+            // Clean markdown and parse JSON
+            let clean = text.replace(/```(json)?/g, "").trim();
+            const data = JSON.parse(clean);
+            
+            if (data.method) setMethod(data.method);
+            if (data.url) {
+                const fullUrl = data.url.startsWith("http") ? data.url : `https://jsonplaceholder.typicode.com${data.url}`;
+                setUrl(fullUrl);
+            }
+            if (data.headers) setHeaders(data.headers.map((h: any, i: number) => ({ id: `h${i}`, ...h })));
+            if (data.params) setParams(data.params.map((p: any, i: number) => ({ id: `p${i}`, ...p })));
+            if (data.body) {
+                setBody(typeof data.body === "string" ? data.body : JSON.stringify(data.body, null, 2));
+                setActiveTab("body");
+            }
+            setShowAi(false);
+            setAiPrompt("");
+        } catch (e) {
+            console.error("[AI Builder] Failed:", e);
+            alert("AI Builder failed: " + (e instanceof Error ? e.message : "Unknown error"));
+        } finally {
+            setIsAiLoading(false);
         }
-    });
+    };
 
     const addField = (type: "headers" | "params") => {
         const newItem = { id: Date.now().toString(), key: "", value: "", active: true };
@@ -208,14 +228,14 @@ export default function ApiTester() {
                         onChange={e => setAiPrompt(e.target.value)}
                         className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                         placeholder="e.g., 'POST request to create a new user with name John and role admin at api.example.com'"
-                        onKeyDown={e => e.key === "Enter" && complete("", { body: { prompt: aiPrompt, model: globalModel } })}
+                        onKeyDown={e => e.key === "Enter" && callAiBuilder()}
                     />
                     <button
-                        onClick={() => complete("", { body: { prompt: aiPrompt, model: globalModel } })}
-                        disabled={aiLoading || !aiPrompt}
+                        onClick={callAiBuilder}
+                        disabled={isAiLoading || !aiPrompt}
                         className="bg-[var(--accent)] text-white px-4 py-1.5 rounded text-xs font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
                     >
-                        {aiLoading ? <RefreshCcw size={14} className="animate-spin" /> : "Build"}
+                        {isAiLoading ? <RefreshCcw size={14} className="animate-spin" /> : "Build"}
                     </button>
                     <button onClick={() => setShowAi(false)} className="text-zinc-500 hover:text-white px-2">×</button>
                 </div>

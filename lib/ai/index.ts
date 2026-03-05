@@ -136,7 +136,7 @@ export async function generateStreamingText(
                 contents: fullPrompt,
             });
 
-            // Create a streaming response compatible with Vercel AI SDK
+            // Create a streaming response compatible with Vercel AI SDK v4
             const encoder = new TextEncoder();
             const stream = new ReadableStream({
                 async start(controller) {
@@ -144,16 +144,9 @@ export async function generateStreamingText(
                         for await (const chunk of response) {
                             const text = chunk.text;
                             if (text) {
-                                // Format as Vercel AI SDK stream part
-                                const data = JSON.stringify({ 
-                                    type: "text-delta", 
-                                    textDelta: text 
-                                });
-                                controller.enqueue(encoder.encode(`0:${data}\n`));
+                                controller.enqueue(encoder.encode(text));
                             }
                         }
-                        // End stream
-                        controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
                         controller.close();
                         resetKeyError(keyIndex);
                     } catch (error) {
@@ -326,7 +319,6 @@ export async function createStreamingResponse(
         return new Response(stream, {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
-                "X-Vercel-AI-Data-Stream": "v1",
             },
         });
     } catch (error) {

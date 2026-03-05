@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { generateJson } from "@/lib/ai";
+import { generateStreamingText } from "@/lib/ai";
 import { aiLimiter } from "@/lib/ratelimit";
 
 const SYSTEM_PROMPT = `You are an API design expert.
 The user will describe an HTTP request they want to make.
 Generate the request configuration as JSON with:
 - method: HTTP method (GET, POST, PUT, PATCH, DELETE)
-- url: The full URL
+- url: The full URL - use https://jsonplaceholder.typicode.com for demo/test APIs
 - headers: Array of { key, value } objects
 - params: Array of { key, value } objects (query parameters)
 - body: Request body object (if applicable)
@@ -30,13 +30,14 @@ export async function POST(req: NextRequest) {
         }
 
         const userPrompt = `Create an HTTP request configuration for: ${prompt}`;
-        
-        try {
-            const config = await generateJson(userPrompt, SYSTEM_PROMPT);
-            return new Response(JSON.stringify(config), { headers: { "Content-Type": "application/json" } });
-        } catch (parseError) {
-            return new Response(JSON.stringify({ error: "Failed to generate request config" }), { status: 500, headers: { "Content-Type": "application/json" } });
-        }
+
+        const stream = await generateStreamingText(userPrompt, SYSTEM_PROMPT);
+
+        return new Response(stream, {
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+            },
+        });
 
     } catch (error) {
         console.error("[API Builder AI Error]:", error);
