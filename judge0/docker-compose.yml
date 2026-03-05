@@ -1,0 +1,45 @@
+services:
+  judge0:
+    image: judge0/judge0:latest
+    ports:
+      - "2358:2358"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PASSWORD=Judge0Pass123
+      - REDIS_HOST=redis
+      - ENABLE_WAIT_RESULT=true
+      - CPU_TIME_LIMIT=5
+      - MEMORY_LIMIT=128000
+      - DISABLE_LSP=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    privileged: true
+    restart: always
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=Judge0Pass123
+      - POSTGRES_DB=judge0
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:

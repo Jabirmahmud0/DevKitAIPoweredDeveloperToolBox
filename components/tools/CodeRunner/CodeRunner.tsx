@@ -127,10 +127,10 @@ export default function CodeRunner() {
 
             const data = await res.json();
 
-            // Judge0 Response format
-            if (data.stdout) setStdout(atob(data.stdout) || data.stdout);
-            if (data.stderr) setStderr(atob(data.stderr) || data.stderr);
-            if (data.compile_output) setCompileError(atob(data.compile_output) || data.compile_output);
+            // Judge0 Response format (base64_encoded=false, so no decoding needed)
+            if (data.stdout) setStdout(data.stdout);
+            if (data.stderr) setStderr(data.stderr);
+            if (data.compile_output) setCompileError(data.compile_output);
 
             if (data.time) setExecTime(`${data.time} s`);
             if (data.memory) setMemory(`${data.memory} KB`);

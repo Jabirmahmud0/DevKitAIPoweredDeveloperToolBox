@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
 import { aiLimiter } from "@/lib/ratelimit";
 
-// Use public Judge0 API by default or custom if provided
-const JUDGE0_API_URL = process.env.JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com";
-const RAPIDAPI_HOST = "judge0-ce.p.rapidapi.com";
+// Judge0 API URL (self-hosted or RapidAPI)
+const JUDGE0_API_URL = process.env.JUDGE0_API_HOST || "http://localhost:2358";
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || "";
 
 export async function POST(req: NextRequest) {
@@ -22,17 +21,13 @@ export async function POST(req: NextRequest) {
             return new Response("Missing source_code or language_id", { status: 400 });
         }
 
-        if (!RAPIDAPI_KEY && JUDGE0_API_URL.includes("rapidapi.com")) {
-            return new Response("RapidAPI Key is missing for Judge0 CE", { status: 500 });
-        }
-
         // 1. Submit Code
         const submissionRes = await fetch(`${JUDGE0_API_URL}/submissions?base64_encoded=false&wait=true`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...(JUDGE0_API_URL.includes("rapidapi.com") && {
-                     "X-RapidAPI-Host": RAPIDAPI_HOST,
+                     "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
                      "X-RapidAPI-Key": RAPIDAPI_KEY
                 })
             },
