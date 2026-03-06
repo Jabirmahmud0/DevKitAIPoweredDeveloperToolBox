@@ -24,11 +24,14 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { action, content, context } = body;
+        const { action, content, context, model } = body;
 
         if (!content) {
             return new Response(JSON.stringify({ error: "Content is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
         }
+
+        // Map model name to full model identifier
+        const modelId = model === "gemini" ? "gemini-2.5-flash" : "gemini-2.5-flash";
 
         let prompt: string;
         let systemPrompt = SYSTEM_PROMPT;
@@ -40,15 +43,15 @@ export async function POST(req: NextRequest) {
 The user will provide a heading or topic.
 Generate a well-written Markdown section about that topic.
 Use proper Markdown formatting including headers, lists, and code blocks where appropriate.`;
-            prompt = context 
+            prompt = context
                 ? `Write a section titled "${content}" that fits with this existing document:\n\n${context}`
                 : `Write a section titled "${content}"`;
         } else {
             return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: { "Content-Type": "application/json" } });
         }
 
-        const stream = await generateStreamingText(prompt, systemPrompt);
-        
+        const stream = await generateStreamingText(prompt, systemPrompt, modelId);
+
         return new Response(stream, {
             headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" },
         });

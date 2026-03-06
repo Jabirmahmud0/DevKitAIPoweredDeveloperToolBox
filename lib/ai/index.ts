@@ -123,8 +123,8 @@ export async function generateStreamingText(
     maxRetries: number = 3
 ): Promise<ReadableStream> {
     const { client, keyIndex } = createGoogleClient();
-    
-    const fullPrompt = system 
+
+    const fullPrompt = system
         ? `${system}\n\n${prompt}`
         : prompt;
 
@@ -138,7 +138,7 @@ export async function generateStreamingText(
 
             // Create a text streaming response compatible with Vercel AI SDK
             const encoder = new TextEncoder();
-            const stream = new ReadableStream({
+            return new ReadableStream({
                 async start(controller) {
                     try {
                         for await (const chunk of response) {
@@ -154,11 +154,10 @@ export async function generateStreamingText(
                                     }
                                 }
                             }
-                            
+
                             if (text) {
-                                // Use AI SDK protocol format: code:JSONvalue
-                                // For text parts (code "0"), the value should be a string
-                                controller.enqueue(encoder.encode(`0:"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`));
+                                // Use AI SDK v4 protocol format - plain text string
+                                controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
                             }
                         }
                         // Send finish signal
@@ -170,36 +169,30 @@ export async function generateStreamingText(
                     }
                 },
             });
-
-            return new Response(stream, {
-                headers: {
-                    "Content-Type": "text/plain; charset=utf-8",
-                },
-            });
         } catch (error) {
             // Don't retry on 404 errors (invalid model, etc.)
             if (isNotFoundError(error)) {
-                console.error(`[Google AI] 404 Error (not retrying):`, 
+                console.error(`[Google AI] 404 Error (not retrying):`,
                     error instanceof Error ? error.message : String(error));
                 throw error;
             }
-            
+
             // Rate limit or other error - apply backoff
             recordKeyError(keyIndex, error);
-            
+
             if (attempt < maxRetries - 1) {
                 // Exponential backoff: 1s, 2s, 4s...
                 const waitTime = Math.pow(2, attempt) * 1000;
                 console.log(`[Google AI] Retry ${attempt + 1}/${maxRetries} in ${waitTime}ms...`);
                 await delay(waitTime);
-                
+
                 // Try with next key
                 const nextClient = createGoogleClient();
                 return generateStreamingTextWithClient(nextClient, fullPrompt, maxRetries, attempt + 1);
             }
         }
     }
-    
+
     throw new Error("Max retries reached for Google AI request");
 }
 
@@ -239,9 +232,8 @@ async function generateStreamingTextWithClient(
                         }
                         
                         if (text) {
-                            // Use AI SDK protocol format: code:JSONvalue
-                            // For text parts (code "0"), the value should be a string
-                            controller.enqueue(encoder.encode(`0:"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`));
+                            // Use AI SDK v4 protocol format - plain text string
+                            controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
                         }
                     }
                     controller.close();
