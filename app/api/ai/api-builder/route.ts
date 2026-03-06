@@ -30,14 +30,8 @@ export async function POST(req: NextRequest) {
         }
 
         const userPrompt = `Create an HTTP request configuration for: ${prompt}`;
-
         const stream = await generateStreamingText(userPrompt, SYSTEM_PROMPT);
-
-        return new Response(stream, {
-            headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-            },
-        });
+        return stream;
 
     } catch (error) {
         console.error("[API Builder AI Error]:", error);

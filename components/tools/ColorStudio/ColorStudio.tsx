@@ -18,6 +18,7 @@ export default function ColorStudio() {
 
     const { complete, isLoading, error } = useCompletion({
         api: "/api/ai/color",
+        body: { model: globalModel },
         onFinish: (_, result) => {
             try {
                 // The AI is prompted to return JUST a JSON array of 5 hex strings.
@@ -34,7 +35,7 @@ export default function ColorStudio() {
     });
 
     const generateAIColors = () => {
-        complete("", { body: { prompt, model: globalModel } });
+        complete("", { body: { prompt } });
     };
 
     const copyColor = (hex: string, index: number) => {

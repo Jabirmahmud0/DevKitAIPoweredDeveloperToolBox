@@ -27,10 +27,7 @@ export async function POST(req: NextRequest) {
 
         const userPrompt = `Generate a 5-color palette for: ${prompt}`;
         const stream = await generateStreamingText(userPrompt, SYSTEM_PROMPT);
-        
-        return new Response(stream, {
-            headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" },
-        });
+        return stream;
 
     } catch (error) {
         console.error("[Color AI Error]:", error);

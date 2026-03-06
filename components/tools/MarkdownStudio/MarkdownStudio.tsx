@@ -222,10 +222,10 @@ export default function MarkdownStudio() {
 
                 {/* Preview */}
                 {(viewMode === "split" || viewMode === "preview") && (
-                    <div className={`flex flex-col relative bg-white dark:bg-[#0d1117] ${viewMode === 'split' ? 'flex-1' : 'w-full'}`}>
-                         <div className="absolute top-0 right-0 z-10 px-3 py-1 bg-[#00000020] dark:bg-[#ffffff20] text-[10px] font-mono text-[var(--text-muted)] rounded-bl-lg">Preview</div>
+                    <div className={`flex flex-col relative bg-[#0d1117] ${viewMode === 'split' ? 'flex-1' : 'w-full'}`}>
+                         <div className="absolute top-0 right-0 z-10 px-3 py-1 bg-[#ffffff10] text-[10px] font-mono text-[var(--text-muted)] rounded-bl-lg">Preview</div>
                          <div className="flex-1 overflow-y-auto p-6 lg:p-10">
-                             <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
+                             <div className="prose prose-invert max-w-none text-[var(--text-primary)]">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypeRaw, rehypeHighlight]}

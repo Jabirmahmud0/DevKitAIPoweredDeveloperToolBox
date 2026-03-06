@@ -136,17 +136,32 @@ export async function generateStreamingText(
                 contents: fullPrompt,
             });
 
-            // Create a streaming response compatible with Vercel AI SDK v4
+            // Create a text streaming response compatible with Vercel AI SDK
             const encoder = new TextEncoder();
             const stream = new ReadableStream({
                 async start(controller) {
                     try {
                         for await (const chunk of response) {
-                            const text = chunk.text;
+                            // Extract text from candidates safely
+                            let text = '';
+                            if (chunk.candidates && chunk.candidates.length > 0) {
+                                const candidate = chunk.candidates[0];
+                                if (candidate.content?.parts) {
+                                    for (const part of candidate.content.parts) {
+                                        if (part.text) {
+                                            text += part.text;
+                                        }
+                                    }
+                                }
+                            }
+                            
                             if (text) {
-                                controller.enqueue(encoder.encode(text));
+                                // Use AI SDK protocol format: code:JSONvalue
+                                // For text parts (code "0"), the value should be a string
+                                controller.enqueue(encoder.encode(`0:"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`));
                             }
                         }
+                        // Send finish signal
                         controller.close();
                         resetKeyError(keyIndex);
                     } catch (error) {
@@ -156,7 +171,11 @@ export async function generateStreamingText(
                 },
             });
 
-            return stream;
+            return new Response(stream, {
+                headers: {
+                    "Content-Type": "text/plain; charset=utf-8",
+                },
+            });
         } catch (error) {
             // Don't retry on 404 errors (invalid model, etc.)
             if (isNotFoundError(error)) {
@@ -206,16 +225,25 @@ async function generateStreamingTextWithClient(
             async start(controller) {
                 try {
                     for await (const chunk of response) {
-                        const text = chunk.text;
+                        // Extract text from candidates safely
+                        let text = '';
+                        if (chunk.candidates && chunk.candidates.length > 0) {
+                            const candidate = chunk.candidates[0];
+                            if (candidate.content?.parts) {
+                                for (const part of candidate.content.parts) {
+                                    if (part.text) {
+                                        text += part.text;
+                                    }
+                                }
+                            }
+                        }
+                        
                         if (text) {
-                            const data = JSON.stringify({ 
-                                type: "text-delta", 
-                                textDelta: text 
-                            });
-                            controller.enqueue(encoder.encode(`0:${data}\n`));
+                            // Use AI SDK protocol format: code:JSONvalue
+                            // For text parts (code "0"), the value should be a string
+                            controller.enqueue(encoder.encode(`0:"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`));
                         }
                     }
-                    controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
                     controller.close();
                     resetKeyError(keyIndex);
                 } catch (error) {
@@ -314,33 +342,7 @@ export async function createStreamingResponse(
     system?: string,
     model?: string
 ): Promise<Response> {
-    try {
-        const stream = await generateStreamingText(prompt, system, model);
-        return new Response(stream, {
-            headers: {
-                "Content-Type": "text/plain; charset=utf-8",
-            },
-        });
-    } catch (error) {
-        console.error("[Google AI] Streaming error:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const is429 = errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED");
-        const is404 = errorMessage.includes("404") || errorMessage.includes("NOT_FOUND");
-        
-        return new Response(
-            JSON.stringify({ 
-                error: is429 ? "Rate limit exceeded - please wait a moment" : 
-                       is404 ? "Model not found - please try again later" :
-                       "AI request failed",
-                message: errorMessage,
-                retryable: !is404,
-            }),
-            { 
-                status: is429 ? 429 : is404 ? 404 : 500,
-                headers: { "Content-Type": "application/json" }
-            }
-        );
-    }
+    return generateStreamingText(prompt, system, model);
 }
 
 // Export for use in components
