@@ -6,6 +6,7 @@ import { parse } from "@babel/parser";
 import { GitMerge, Wand2, MonitorPlay, AlertTriangle } from "lucide-react";
 import { useCompletion } from "ai/react";
 import { useToolStore } from "@/lib/stores/useToolStore";
+import { addHistoryEntry } from "@/lib/db";
 
 // Dynamically import Tree to avoid SSR issues with d3
 const Tree = dynamic(() => import("react-d3-tree"), { ssr: false });
@@ -66,7 +67,23 @@ export default function AstExplorer() {
     const [selectedNode, setSelectedNode] = useState<any>(null);
 
     const { complete, completion, isLoading: aiLoading, setCompletion } = useCompletion({
-        api: "/api/ai/ast"
+        api: "/api/ai/ast",
+        onFinish: async (_, result) => {
+            // Save to history when AI explanation completes
+            if (selectedNode && code) {
+                const { start, end } = selectedNode;
+                let snippet = "";
+                if (typeof start === "number" && typeof end === "number") {
+                    snippet = code.substring(start, end);
+                }
+                await addHistoryEntry({
+                    toolId: "ast-explorer",
+                    input: { code: snippet, nodeType: selectedNode.type },
+                    output: result.output,
+                    label: `AST: ${selectedNode.type} - ${snippet.slice(0, 40).replace(/\n/g, " ")}...`,
+                });
+            }
+        }
     });
 
     // Parse code whenever it changes

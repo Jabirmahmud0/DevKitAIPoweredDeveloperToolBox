@@ -162,6 +162,132 @@ body {
   line-height: 1.7;
 }
 
+.streaming-text .hljs {
+  background: transparent !important;
+  color: #d4d4d4 !important;
+}
+
+.streaming-text .hljs-keyword {
+  color: #c586c0 !important;
+  font-weight: 600;
+}
+
+.streaming-text .hljs-string {
+  color: #ce9178 !important;
+}
+
+.streaming-text .hljs-number {
+  color: #b5cea8 !important;
+}
+
+.streaming-text .hljs-function {
+  color: #dcdcaa !important;
+}
+
+.streaming-text .hljs-comment {
+  color: #6a9955 !important;
+  font-style: italic;
+}
+
+.streaming-text .hljs-class {
+  color: #4ec9b0 !important;
+}
+
+.streaming-text .hljs-variable {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-params {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-built_in {
+  color: #4fc1ff !important;
+}
+
+.streaming-text .hljs-title {
+  color: #dcdcaa !important;
+}
+
+.streaming-text .hljs-attr {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-attribute {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-section {
+  color: #dcdcaa !important;
+}
+
+.streaming-text .hljs-tag {
+  color: #569cd6 !important;
+}
+
+.streaming-text .hljs-name {
+  color: #569cd6 !important;
+}
+
+.streaming-text .hljs-type {
+  color: #4ec9b0 !important;
+}
+
+.streaming-text .hljs-operator {
+  color: #d4d4d4 !important;
+}
+
+.streaming-text .hljs-punctuation {
+  color: #d4d4d4 !important;
+}
+
+.streaming-text .hljs-meta {
+  color: #c586c0 !important;
+}
+
+.streaming-text .hljs-doctag {
+  color: #c586c0 !important;
+  font-weight: 600;
+}
+
+.streaming-text .hljs-property {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-literal {
+  color: #569cd6 !important;
+}
+
+.streaming-text .hljs-selector-tag {
+  color: #569cd6 !important;
+}
+
+.streaming-text .hljs-selector-id {
+  color: #dcdcaa !important;
+}
+
+.streaming-text .hljs-selector-class {
+  color: #dcdcaa !important;
+}
+
+.streaming-text .hljs-selector-attr {
+  color: #9cdcfe !important;
+}
+
+.streaming-text .hljs-selector-pseudo {
+  color: #d7ba7d !important;
+}
+
+.streaming-text .hljs-addition {
+  color: #b5cea8 !important;
+  background: rgba(34, 211, 167, 0.1);
+}
+
+.streaming-text .hljs-deletion {
+  color: #f43f5e !important;
+  background: rgba(244, 63, 94, 0.1);
+}
+
 /* ─── AST Explorer Tree ─────────────────────────────────────── */
 .tree-container,
 .tree-container > div,

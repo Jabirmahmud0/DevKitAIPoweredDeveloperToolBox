@@ -53,9 +53,10 @@ export function HistoryPanel({ open, onClose, onRestore }: Props) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
+                        style={{ pointerEvents: open ? 'auto' : 'none' }}
                     />
                     <motion.aside
-                        className="fixed right-0 top-0 bottom-0 z-40 w-80 glass border-l border-[var(--border)] flex flex-col"
+                        className="fixed right-0 top-0 bottom-0 z-50 w-80 glass border-l border-[var(--border)] flex flex-col shadow-2xl"
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}

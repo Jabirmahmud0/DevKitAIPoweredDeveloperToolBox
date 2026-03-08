@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         const { code, language } = body;
 
         if (!code) {
-            return new Response(JSON.stringify({ error: "Code is required" }), { 
+            return new Response(JSON.stringify({ error: "Code is required" }), {
                 status: 400,
                 headers: { "Content-Type": "application/json" },
             });
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
         // Get the streaming response
         const aiStream = await generateStreamingText(prompt, SYSTEM_PROMPT);
-        
+
         // Return with proper headers
         return new Response(aiStream, {
             headers: {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error("[Code Review AI Error]:", error);
         const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
-        return new Response(JSON.stringify({ error: errorMessage }), { 
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
         });
