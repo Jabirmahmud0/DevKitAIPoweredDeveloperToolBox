@@ -5,7 +5,8 @@ colorFrom: indigo
 colorTo: purple
 sdk: docker
 sdk_version: ""
-app_file: Dockerfile
+app_file: app.py
+python_version: "3.9"
 pinned: false
 ---
 
@@ -47,7 +48,7 @@ curl -X POST "https://YOUR-USERNAME-judge0.hf.space/submissions?base64_encoded=f
 | Ruby (2.7.0) | 72 |
 | Python 2.7.17 | 70 |
 
-[Full language list](https://judge0.com/docs/1.13.0/ce/languages/)
+[Full language list](https://judge0.com/docs/ce/languages/)
 
 ## API Documentation
 
