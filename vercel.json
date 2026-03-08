@@ -13,16 +13,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "GOOGLE_API_KEY_A": "@google_api_key_a",
-    "GOOGLE_API_KEY_B": "@google_api_key_b",
-    "GOOGLE_API_KEY_C": "@google_api_key_c",
-    "GOOGLE_API_KEY_D": "@google_api_key_d",
-    "GOOGLE_API_KEY_E": "@google_api_key_e",
-    "GOOGLE_API_KEY_F": "@google_api_key_f",
-    "UPSTASH_REDIS_REST_URL": "@upstash_redis_rest_url",
-    "UPSTASH_REDIS_REST_TOKEN": "@upstash_redis_rest_token",
-    "JUDGE0_API_HOST": "@judge0_api_host"
-  }
+  ]
 }
