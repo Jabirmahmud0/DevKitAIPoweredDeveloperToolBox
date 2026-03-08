@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { generateStreamingText } from "@/lib/ai";
+import { NextRequest, NextResponse } from "next/server";
+import { generateStreamingText, resolveModelName } from "@/lib/ai";
 import { aiLimiter } from "@/lib/ratelimit";
 
 const SYSTEM_PROMPT = `You are an expert Senior Software Engineer performing a code review.
@@ -18,36 +18,28 @@ Provide snippets of suggested fixes where applicable.
 
 Keep your entire response concise and to the point.`;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
-        // Rate Limiting
         const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
         const { success } = await aiLimiter.limit(ip);
 
         if (!success) {
-            return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), {
-                status: 429,
-                headers: { "Content-Type": "application/json" },
-            });
+            return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
         }
 
         const body = await req.json();
-        const { code, language } = body;
+        const { code, language, model } = body;
 
         if (!code) {
-            return new Response(JSON.stringify({ error: "Code is required" }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-            });
+            return NextResponse.json({ error: "Code is required" }, { status: 400 });
         }
 
         const prompt = `Please review the following ${language || "code"} snippet:\n\n\`\`\`${language || ""}\n${code}\n\`\`\``;
 
-        // Get the streaming response
-        const aiStream = await generateStreamingText(prompt, SYSTEM_PROMPT);
+        const selectedModel = resolveModelName(model || "gemini");
+        const aiStream = await generateStreamingText(prompt, SYSTEM_PROMPT, selectedModel);
 
-        // Return with proper headers
-        return new Response(aiStream, {
+        return new NextResponse(aiStream, {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
                 "X-Vercel-AI-Data-Stream": "v1",
@@ -57,9 +49,6 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error("[Code Review AI Error]:", error);
         const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-        });
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

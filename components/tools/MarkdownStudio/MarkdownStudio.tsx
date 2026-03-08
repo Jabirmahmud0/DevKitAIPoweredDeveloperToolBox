@@ -177,7 +177,7 @@ const Table = ({ node, children, ...props }: any) => {
 // Custom heading components with IDs for TOC
 const HeadingComponent = ({ node, children, level, ...props }: any) => {
     const id = String(children).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+    const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
     const sizeClasses = {
         1: "text-2xl font-bold mb-4 mt-6",
         2: "text-xl font-bold mb-3 mt-5",
@@ -393,7 +393,7 @@ ${markdown}
     const downloadPdf = () => {
         // Using html2pdf which is already installed
         import("html2pdf.js").then((html2pdf) => {
-            const element = document.querySelector(".markdown-preview-content");
+            const element = document.querySelector(".markdown-preview-content") as HTMLElement;
             if (element) {
                 html2pdf.default().from(element).save(`document-${Date.now()}.pdf`);
             }

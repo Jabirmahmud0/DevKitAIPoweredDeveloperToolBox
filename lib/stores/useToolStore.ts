@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type EditorTheme = "vs-dark" | "github-dark" | "monokai" | "solarized-dark";
-export type AIModel = "gemini";
+export type EditorTheme = "vs-dark" | "github-dark" | "monokai" | "vs-light" | "github-light" | "solarized-light";
+export type AIModel = "gemini" | "gemini-2.5-flash" | "gemini-2.0-flash" | "gemini-2.0-flash-lite";
 export type ToolId =
     | "code-reviewer"
     | "sql-playground"

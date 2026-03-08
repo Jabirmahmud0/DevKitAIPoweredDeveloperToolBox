@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateStreamingText } from "@/lib/ai";
 import { aiLimiter } from "@/lib/ratelimit";
 
@@ -13,28 +13,28 @@ Generate the request configuration as JSON with:
 
 Respond with ONLY valid JSON, no markdown or explanations.`;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
         const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
         const { success } = await aiLimiter.limit(ip);
 
         if (!success) {
-            return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json" } });
+            return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }
 
         const body = await req.json();
         const { prompt } = body;
 
         if (!prompt) {
-            return new Response(JSON.stringify({ error: "Prompt is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+            return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
         }
 
         const userPrompt = `Create an HTTP request configuration for: ${prompt}`;
         const stream = await generateStreamingText(userPrompt, SYSTEM_PROMPT);
-        return stream;
+        return new NextResponse(stream);
 
     } catch (error) {
         console.error("[API Builder AI Error]:", error);
-        return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

@@ -334,8 +334,24 @@ export async function createStreamingResponse(
     system?: string,
     model?: string
 ): Promise<Response> {
-    return generateStreamingText(prompt, system, model);
+    const stream = await generateStreamingText(prompt, system, model);
+    return new Response(stream, {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
 }
 
 // Export for use in components
-export type AIModel = "gemini";
+export type AIModel = "gemini" | "gemini-2.5-flash" | "gemini-2.0-flash" | "gemini-2.0-flash-lite";
+
+/**
+ * Map user-friendly model names to actual API model names
+ */
+export function resolveModelName(model: AIModel): string {
+    const modelMap: Record<AIModel, string> = {
+        "gemini": "gemini-2.5-flash",
+        "gemini-2.5-flash": "gemini-2.5-flash",
+        "gemini-2.0-flash": "gemini-2.0-flash",
+        "gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
+    };
+    return modelMap[model] || "gemini-2.5-flash";
+}

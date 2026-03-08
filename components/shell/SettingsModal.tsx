@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, X, Bot, Type, Palette } from "lucide-react";
+import { Settings, X, Bot, Type } from "lucide-react";
 import { useToolStore } from "@/lib/stores/useToolStore";
-import type { EditorTheme } from "@/lib/stores/useToolStore";
 import type { AIModel } from "@/lib/ai";
 
 interface Props {
@@ -13,21 +12,13 @@ interface Props {
 }
 
 const MODEL_OPTIONS: { value: AIModel; label: string; description: string; color: string }[] = [
-    { value: "gemini", label: "Gemini 2.0 Flash", description: "Fast, cost-effective, high quality", color: "#4285f4" },
-];
-
-const THEME_OPTIONS: { value: EditorTheme; label: string }[] = [
-    { value: "vs-dark", label: "VS Dark" },
-    { value: "github-dark", label: "GitHub Dark" },
-    { value: "monokai", label: "Monokai" },
-    { value: "solarized-dark", label: "Solarized" },
+    { value: "gemini", label: "Gemini 2.5 Flash", description: "Fast, high-quality responses", color: "#4285f4" },
 ];
 
 export function SettingsModal({ open, onClose }: Props) {
     const {
         globalModel, setGlobalModel,
         fontSize, setFontSize,
-        editorTheme, setEditorTheme,
     } = useToolStore();
 
     const [showKeys, setShowKeys] = useState(false);
@@ -123,30 +114,6 @@ export function SettingsModal({ open, onClose }: Props) {
                                     />
                                     <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
                                         <span>11px</span><span>20px</span>
-                                    </div>
-                                </section>
-
-                                {/* Editor Theme */}
-                                <section>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Palette size={14} className="text-[var(--accent)]" />
-                                        <span className="text-sm font-medium text-[var(--text-primary)]">Editor Theme</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {THEME_OPTIONS.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => setEditorTheme(opt.value)}
-                                                className="px-3 py-2 rounded-xl text-sm transition-all duration-150 text-center"
-                                                style={{
-                                                    background: editorTheme === opt.value ? "var(--accent)" : "var(--bg-elevated)",
-                                                    color: editorTheme === opt.value ? "white" : "var(--text-secondary)",
-                                                    border: `1px solid ${editorTheme === opt.value ? "transparent" : "var(--border)"}`,
-                                                }}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
                                     </div>
                                 </section>
                             </div>

@@ -79,7 +79,7 @@ export default function AstExplorer() {
                 await addHistoryEntry({
                     toolId: "ast-explorer",
                     input: { code: snippet, nodeType: selectedNode.type },
-                    output: result.output,
+                    output: result as unknown as string,
                     label: `AST: ${selectedNode.type} - ${snippet.slice(0, 40).replace(/\n/g, " ")}...`,
                 });
             }

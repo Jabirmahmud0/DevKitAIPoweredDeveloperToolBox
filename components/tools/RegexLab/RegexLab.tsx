@@ -5,6 +5,8 @@ import * as Comlink from "comlink";
 import { Wand2, BookOpen, Flag, AlertTriangle, RefreshCw, CheckCircle, Copy } from "lucide-react";
 import { useToolStore } from "@/lib/stores/useToolStore";
 import type { RegexResult, MatchGroup } from "@/lib/workers/regex.worker";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 
 interface MatchResult {
     fullMatch: string;
@@ -53,6 +55,9 @@ function buildHighlightedHtml(text: string, matches: MatchResult[]): string {
 }
 
 export default function RegexLab() {
+    const { fontSize, editorTheme, activeToolId, globalModel } = useToolStore();
+    const toolColor = "#7c6af5"; // Accent color for regex tool
+    
     const [pattern, setPattern] = useState("\\b\\w{4,}\\b");
     const [flags, setFlags] = useState<Set<string>>(new Set(["g", "i"]));
     const [testString, setTestString] = useState(
@@ -66,7 +71,7 @@ export default function RegexLab() {
     const [aiResponse, setAiResponse] = useState("");
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
-    
+
     const workerRef = useRef<Worker | null>(null);
     const regexApiRef = useRef<any>(null);
 
@@ -138,6 +143,7 @@ export default function RegexLab() {
                     pattern: aiMode === "explain" ? pattern : undefined,
                     mode: aiMode,
                     description: aiMode === "generate" ? aiPrompt : undefined,
+                    model: globalModel,
                 }),
             });
 
@@ -170,15 +176,18 @@ export default function RegexLab() {
                     if (!trimmedLine) continue;
                     
                     if (trimmedLine.startsWith("0:")) {
+                        const content = trimmedLine.slice(2);
                         try {
-                            const data = JSON.parse(trimmedLine.slice(2));
-                            if (data.textDelta) {
-                                accumulatedText += data.textDelta;
+                            const data = JSON.parse(content);
+                            // Handle both 'text' and 'textDelta' properties
+                            const textChunk = typeof data === 'string' ? data : (data.text || data.textDelta);
+                            if (textChunk) {
+                                accumulatedText += textChunk;
                                 setAiResponse(accumulatedText);
                             }
                         } catch {
-                            if (trimmedLine.length > 2) {
-                                accumulatedText += trimmedLine.slice(2);
+                            if (content.length > 0) {
+                                accumulatedText += content;
                                 setAiResponse(accumulatedText);
                             }
                         }
@@ -350,22 +359,37 @@ export default function RegexLab() {
                     {/* AI Response Display */}
                     {(aiResponse || isAiLoading) && (
                         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                            <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                                <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold">
-                                    {isAiLoading ? "Generating..." : "Response"}
-                                </span>
+                            <div className="flex items-center justify-between mb-2 flex-shrink-0 pb-2 border-b border-[var(--border)]">
+                                <div className="flex items-center gap-2">
+                                    <div 
+                                        className="w-5 h-5 rounded-lg flex items-center justify-center"
+                                        style={{ background: `${toolColor}20`, color: toolColor }}
+                                    >
+                                        <Wand2 size={12} />
+                                    </div>
+                                    <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold">
+                                        {isAiLoading ? (
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+                                                Generating...
+                                            </span>
+                                        ) : (
+                                            <span>Response</span>
+                                        )}
+                                    </span>
+                                </div>
                                 {aiResponse && !isAiLoading && (
                                     <div className="flex items-center gap-1">
                                         <button
                                             onClick={handleCopyPatternOnly}
-                                            className="p-1 rounded hover:bg-[var(--bg-elevated)] transition-colors flex items-center gap-1 text-[10px] text-[var(--accent)]"
+                                            className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors flex items-center gap-1 text-[10px] text-[var(--accent)]"
                                             title="Copy pattern only (first line)"
                                         >
                                             <Copy size={10} /> Pattern
                                         </button>
                                         <button
                                             onClick={handleCopyResponse}
-                                            className="p-1 rounded hover:bg-[var(--bg-elevated)] transition-colors"
+                                            className="p-1.5 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                             title="Copy full response"
                                         >
                                             {copySuccess ? <CheckCircle size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
@@ -373,17 +397,103 @@ export default function RegexLab() {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1 overflow-y-auto text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap font-mono bg-[var(--bg-elevated)] rounded-xl p-3">
-                                {aiResponse}
-                                {isAiLoading && <span className="animate-blink text-[var(--accent)]">▌</span>}
+                            <div className="flex-1 overflow-y-auto text-xs leading-relaxed bg-[var(--bg-elevated)] rounded-xl p-3 streaming-text">
+                                <ReactMarkdown
+                                    rehypePlugins={[rehypeHighlight]}
+                                    components={{
+                                        h1: ({ node, ...props }) => (
+                                            <h1 className="text-sm font-bold text-[var(--text-primary)] mt-4 mb-2 pb-1 border-b border-[var(--border)]" {...props} />
+                                        ),
+                                        h2: ({ node, ...props }) => (
+                                            <h2 className="text-xs font-bold text-[var(--accent)] mt-3 mb-1.5" {...props} />
+                                        ),
+                                        h3: ({ node, ...props }) => (
+                                            <h3 className="text-xs font-semibold text-[var(--text-primary)] mt-2 mb-1" {...props} />
+                                        ),
+                                        p: ({ node, ...props }) => (
+                                            <p className="mb-2 text-[var(--text-secondary)] leading-relaxed" {...props} />
+                                        ),
+                                        ul: ({ node, ...props }) => (
+                                            <ul className="list-disc list-inside mb-2 space-y-1 pl-2" {...props} />
+                                        ),
+                                        ol: ({ node, ...props }) => (
+                                            <ol className="list-decimal list-inside mb-2 space-y-1 pl-2" {...props} />
+                                        ),
+                                        li: ({ node, ...props }) => (
+                                            <li className="text-[var(--text-secondary)]" {...props} />
+                                        ),
+                                        strong: ({ node, ...props }) => (
+                                            <strong className="font-bold text-[var(--text-primary)]" {...props} />
+                                        ),
+                                        em: ({ node, ...props }) => (
+                                            <em className="text-[var(--accent)] italic" {...props} />
+                                        ),
+                                        code: ({ node, inline, className, children, ...props }: any) => {
+                                            if (inline) {
+                                                return (
+                                                    <code className="px-1.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--accent)] text-[10px] font-mono border border-[var(--border)]" {...props}>
+                                                        {children}
+                                                    </code>
+                                                );
+                                            }
+                                            return (
+                                                <code className={className} {...props}>
+                                                    {children}
+                                                </code>
+                                            );
+                                        },
+                                        pre: ({ node, children, ...props }: any) => (
+                                            <div className="my-2 rounded-lg overflow-hidden border border-[var(--border)]">
+                                                <div className="bg-[#0d1117] overflow-x-auto">
+                                                    <pre className="p-3 m-0 text-xs" {...props}>
+                                                        {children}
+                                                    </pre>
+                                                </div>
+                                            </div>
+                                        ),
+                                        blockquote: ({ node, ...props }) => (
+                                            <blockquote className="border-l-2 border-[var(--accent)] pl-3 py-1.5 my-2 bg-[var(--bg-surface)] rounded-r-lg text-[var(--text-secondary)] text-[11px]" {...props} />
+                                        ),
+                                        hr: ({ node, ...props }) => (
+                                            <hr className="my-3 border-[var(--border)]" {...props} />
+                                        ),
+                                        a: ({ node, ...props }) => (
+                                            <a className="text-[var(--accent)] hover:text-[var(--accent-hover)] underline underline-offset-2" {...props} />
+                                        ),
+                                    }}
+                                >
+                                    {aiResponse}
+                                </ReactMarkdown>
+                                {isAiLoading && <span className="animate-blink text-[var(--accent)] ml-1">▌</span>}
                             </div>
                         </div>
                     )}
                     
                     {!aiResponse && !isAiLoading && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] text-xs text-center gap-2 p-4">
-                            <Wand2 size={24} className="opacity-30" />
-                            <span>Click "Explain Pattern" or "Generate Regex" to get AI help</span>
+                        <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-muted)] text-xs text-center gap-3 p-4">
+                            <div 
+                                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                                style={{ 
+                                    background: "linear-gradient(135deg, rgba(124, 106, 245, 0.15) 0%, rgba(124, 106, 245, 0.05) 100%)",
+                                    boxShadow: "0 4px 12px rgba(124, 106, 245, 0.1)"
+                                }}
+                            >
+                                <Wand2 size={20} className="text-[var(--accent)]" />
+                            </div>
+                            <div>
+                                <span className="text-xs font-medium text-[var(--text-primary)] block mb-1">AI Regex Assistant</span>
+                                <span className="text-[10px] text-[var(--text-muted)] block max-w-[180px]">
+                                    Explain any regex pattern or generate one from description
+                                </span>
+                            </div>
+                            <div className="flex gap-2 mt-1">
+                                <span className="text-[9px] px-2 py-1 rounded-full font-medium" style={{ background: "rgba(124, 106, 245, 0.15)", color: "#7c6af5" }}>
+                                    🔍 Explain
+                                </span>
+                                <span className="text-[9px] px-2 py-1 rounded-full font-medium" style={{ background: "rgba(124, 106, 245, 0.15)", color: "#7c6af5" }}>
+                                    ✨ Generate
+                                </span>
+                            </div>
                         </div>
                     )}
                 </div>

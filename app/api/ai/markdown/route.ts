@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateStreamingText } from "@/lib/ai";
 import { aiLimiter } from "@/lib/ratelimit";
 
@@ -14,23 +14,22 @@ Focus on:
 
 Provide the improved version directly without explanations.`;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
         const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
         const { success } = await aiLimiter.limit(ip);
 
         if (!success) {
-            return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json" } });
+            return NextResponse.json({ error: "Too many requests" }, { status: 429 });
         }
 
         const body = await req.json();
         const { action, content, context, model } = body;
 
         if (!content) {
-            return new Response(JSON.stringify({ error: "Content is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+            return NextResponse.json({ error: "Content is required" }, { status: 400 });
         }
 
-        // Map model name to full model identifier
         const modelId = model === "gemini" ? "gemini-2.5-flash" : "gemini-2.5-flash";
 
         let prompt: string;
@@ -47,17 +46,17 @@ Use proper Markdown formatting including headers, lists, and code blocks where a
                 ? `Write a section titled "${content}" that fits with this existing document:\n\n${context}`
                 : `Write a section titled "${content}"`;
         } else {
-            return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: { "Content-Type": "application/json" } });
+            return NextResponse.json({ error: "Invalid action" }, { status: 400 });
         }
 
         const stream = await generateStreamingText(prompt, systemPrompt, modelId);
 
-        return new Response(stream, {
+        return new NextResponse(stream, {
             headers: { "Content-Type": "text/plain; charset=utf-8", "X-Vercel-AI-Data-Stream": "v1" },
         });
 
     } catch (error) {
         console.error("[Markdown AI Error]:", error);
-        return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

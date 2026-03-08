@@ -21,7 +21,7 @@ const LANGUAGE_OPTIONS = [
 ];
 
 export default function CodeReviewer() {
-    const { fontSize, editorTheme, activeToolId } = useToolStore();
+    const { fontSize, editorTheme, activeToolId, globalModel } = useToolStore();
     const tool = TOOL_MAP[activeToolId];
     const [code, setCode] = useState(`// Paste your code here for AI review
 function processUserData(users) {
@@ -53,7 +53,7 @@ function processUserData(users) {
             const response = await fetch("/api/ai/review", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code, language }),
+                body: JSON.stringify({ code, language, model: globalModel }),
                 signal: abortControllerRef.current.signal,
             });
 

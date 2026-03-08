@@ -1,6 +1,6 @@
 # DevKit — AI-Powered Developer Toolbox
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI-SDK-black?logo=vercel)](https://sdk.vercel.ai/)
@@ -16,18 +16,18 @@
 
 ### 10 Developer Tools
 
-| Tool | Technologies | Description |
-|------|-------------|-------------|
-| **🔍 AI Code Reviewer** | Gemini/GPT-4o/Claude, Monaco | Get instant AI feedback on security, performance, and best practices |
-| **📦 JSON Toolkit** | jsdiff, JMESPath, Workers | Format, validate, diff, query, and convert JSON with AI schema generation |
-| **🧪 Regex Lab** | XRegExp, Web Workers | Build and test regex patterns with real-time highlighting and AI explain |
-| **📝 Markdown Studio** | react-markdown, Mermaid | Split-pane editor with live preview, AI writing assistant, and export |
-| **🔐 Crypto Toolkit** | Web Crypto, WASM, jose | Hash, encode, encrypt, JWT debug, and generate UUIDs client-side |
-| **💾 SQL Playground** | sql.js (WASM) | In-browser SQLite with AI query builder and sample datasets |
-| **▶️ Code Runner** | Judge0 API | Execute code in 10+ languages with AI debugging |
-| **🎨 AI Color Studio** | chroma.js, culori, Gemini | Generate accessible color palettes with live UI preview |
-| **🌐 API Tester** | axios, Zustand | Full HTTP client with collections and AI request builder |
-| **🌳 AST Explorer** | @babel/parser, D3 | Visualize JavaScript/TypeScript ASTs with AI node explanation |
+| # | Tool | Technologies | What It Does |
+|---|------|-------------|--------------|
+| 1 | **🔍 AI Code Reviewer** | Gemini, Monaco Editor | Paste any code snippet and get instant AI-powered code review. Identifies security vulnerabilities, performance issues, potential bugs, and suggests improvements with code examples. Supports multiple languages. |
+| 2 | **📦 JSON Toolkit** | jsdiff, JMESPath, Workers | Complete JSON toolbox: format/minify JSON, validate syntax, compare two JSON objects with visual diff, query JSON using JMESPath expressions, and generate TypeScript interfaces + Zod schemas from JSON using AI. |
+| 3 | **🧪 Regex Lab** | XRegExp, Web Workers | Build, test, and understand regular expressions. Real-time regex matching with highlighted results, AI-powered regex explanation (paste regex, get plain English breakdown), and AI regex generation (describe pattern in words, get working regex). |
+| 4 | **📝 Markdown Studio** | react-markdown, Mermaid | Full-featured Markdown editor with split-pane live preview. AI writing assistant to improve/expand content, Mermaid diagram support, table of contents generation, word count, reading time, and export to PDF/HTML. |
+| 5 | **🔐 Crypto Toolkit** | Web Crypto, WASM, jose | Client-side cryptographic tools: hash functions (SHA-256, SHA-512, MD5), encoding (Base64, Hex), encryption/decryption (AES), JWT token debugging, UUID/guid generation. All operations run locally in browser. |
+| 6 | **💾 SQL Playground** | sql.js (WASM) | In-browser SQLite database powered by WebAssembly. Write and execute SQL queries, AI SQL query builder (describe query in English, get SQL), sample datasets included, query results with export. No server needed. |
+| 7 | **▶️ Code Runner** | Judge0 API | Execute code in 40+ programming languages directly in browser. Supports Python, JavaScript, Java, C++, Go, Rust, and more. AI-powered error debugging explains compile/runtime errors and suggests fixes. |
+| 8 | **🎨 AI Color Studio** | chroma.js, culori, Gemini | Generate professional color palettes from text descriptions. AI creates cohesive 5-color palettes matching your brand/emotion. Live preview on UI mockups, accessibility contrast checking, export as CSS/JSON/Tailwind config. |
+| 9 | **🌐 API Tester** | axios, Zustand | Lightweight HTTP client (mini Postman). Build and test REST APIs with full control over method, headers, query params, and body. Save collections, view response headers/timing, AI-assisted request builder. |
+| 10 | **🌳 AST Explorer** | @babel/parser, D3 | Visualize JavaScript/TypeScript Abstract Syntax Trees. Interactive tree view with node highlighting, click any node to see detailed explanation powered by AI. Understand how parsers interpret your code. |
 
 ---
 
@@ -65,13 +65,15 @@ cd devkit
 npm install
 
 # Set up environment variables (see below)
-cp .env.local.example .env.local
+cp .env.example .env.local
 
 # Run development server
 npm run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000)
+
+**For deployment instructions, see [DEPLOY.md](./DEPLOY.md)**
 
 ---
 
@@ -80,29 +82,35 @@ Visit [http://localhost:3000](http://localhost:3000)
 Create a `.env.local` file in the root:
 
 ```env
-# ─── AI Providers ───────────────────────────────────────────────────────────
-GOOGLE_GENERATIVE_AI_API_KEY=     # Gemini 2.0 Flash
-OPENAI_API_KEY=                   # GPT-4o-mini
-ANTHROPIC_API_KEY=                # Claude Sonnet 3.5
+# ─── Google Gemini API Keys (Auto-Rotation) ──────────────────────────────────
+# Add at least one API key. System rotates between keys on failure/rate limits.
+# Get keys from: https://aistudio.google.com/apikey
+GOOGLE_API_KEY_1=
+GOOGLE_API_KEY_2=
+GOOGLE_API_KEY_3=
+GOOGLE_API_KEY_4=
+GOOGLE_API_KEY_5=
+GOOGLE_API_KEY_6=
 
 # ─── Rate Limiting (Upstash Redis) ──────────────────────────────────────────
+# Optional: For production rate limiting. Leave empty for no rate limiting.
+# Get credentials from: https://console.upstash.com
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
-# ─── Code Execution (Judge0 via RapidAPI) ───────────────────────────────────
-JUDGE0_API_KEY=
-JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
+# ─── Code Execution (Judge0 Self-Hosted) ────────────────────────────────────
+# Optional: For Code Runner tool. Leave empty to disable code execution.
+# Self-hosted via Docker: docker run -p 2358:2358 judge0/judge0
+JUDGE0_API_HOST=http://localhost:2358
 ```
 
 ### Getting API Keys
 
-| Service | URL | Free Tier |
-|---------|-----|-----------|
-| Google AI Studio | https://aistudio.google.com/apikey | ✅ 1500 req/day |
-| OpenAI Platform | https://platform.openai.com/api-keys | ✅ $5 free credit |
-| Anthropic Console | https://console.anthropic.com/ | ✅ Limited free tier |
-| Upstash Redis | https://upstash.com/ | ✅ 10k req/day free |
-| Judge0 (RapidAPI) | https://rapidapi.com/judge0-judge0-default/api/judge0-ce | ✅ 50 calls/month |
+| Service | URL | Free Tier | Used By |
+|---------|-----|-----------|---------|
+| **Google AI Studio** | https://aistudio.google.com/apikey | ✅ 1500 req/day | All AI features |
+| **Upstash Redis** | https://upstash.com/ | ✅ 10k req/day | Rate limiting (optional) |
+| **Judge0** | Self-hosted (Docker) | ✅ Free | Code Runner tool |
 
 ---
 
@@ -181,21 +189,35 @@ DevKit uses a **single-page application (SPA)** shell with tab-based navigation:
 
 ### AI Layer
 
-All AI tools use the **Vercel AI SDK** with a unified streaming pattern:
+All AI tools use **Google Gemini** with a unified streaming pattern:
 
 ```typescript
 // lib/ai/index.ts
-export async function createStreamingAIResponse(
+export async function generateStreamingText(
     prompt: string,
-    model: AIModel,
-    system?: string
-): Promise<Response>
+    system?: string,
+    model?: string
+): Promise<ReadableStream>
 ```
 
-Each tool has its own API route with:
-1. Rate limiting (Upstash Redis)
-2. System prompts for consistent output
-3. Streaming responses for real-time feedback
+**Features:**
+- **Automatic API Key Rotation** - System rotates between 6 API keys on failure or rate limits
+- **Exponential Backoff** - Automatic retry with increasing delays on errors
+- **Streaming Responses** - Real-time token streaming for instant feedback
+- **System Prompts** - Each tool has specialized prompts for consistent output
+
+**AI-Powered Tools:**
+| Tool | AI Functionality |
+|------|------------------|
+| Code Reviewer | Analyzes code for bugs, security issues, and suggests fixes |
+| JSON Toolkit | Generates TypeScript interfaces and Zod schemas from JSON |
+| Regex Lab | Explains regex patterns and generates regex from descriptions |
+| SQL Playground | Converts natural language to SQL queries |
+| Debug Tool | Explains errors and provides fix suggestions |
+| Color Studio | Generates color palettes from text descriptions |
+| Markdown Studio | Improves writing and expands content |
+| API Tester | Builds HTTP requests from natural language |
+| AST Explorer | Explains AST nodes in plain English |
 
 ### Web Workers
 
@@ -263,15 +285,26 @@ npm i -g vercel
 vercel
 ```
 
-1. Connect your GitHub repo to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy automatically on push to `main`
+**Steps:**
+1. Push code to GitHub
+2. Go to [Vercel](https://vercel.com) and import your repository
+3. Add environment variables in **Settings → Environment Variables**:
+   - `GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_6` (at least one required)
+   - `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` (optional)
+   - `JUDGE0_API_HOST` (optional)
+4. Deploy
 
-### Custom Domain
+See `DEPLOY.md` for detailed deployment instructions.
 
-1. Go to Vercel Project Settings → Domains
-2. Add your domain
-3. Update DNS records as instructed
+### Environment Variables in Production
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `GOOGLE_API_KEY_1` | ✅ Yes | Primary AI API key |
+| `GOOGLE_API_KEY_2-6` | ❌ Optional | Backup keys for auto-rotation |
+| `UPSTASH_REDIS_REST_URL` | ❌ Optional | Rate limiting (production) |
+| `UPSTASH_REDIS_REST_TOKEN` | ❌ Optional | Rate limiting (production) |
+| `JUDGE0_API_HOST` | ❌ Optional | Code execution (self-hosted Judge0) |
 
 ---
 

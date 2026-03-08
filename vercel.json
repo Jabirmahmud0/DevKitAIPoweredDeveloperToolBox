@@ -1,0 +1,28 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "GOOGLE_API_KEY_1": "@google_api_key_1",
+    "GOOGLE_API_KEY_2": "@google_api_key_2",
+    "GOOGLE_API_KEY_3": "@google_api_key_3",
+    "GOOGLE_API_KEY_4": "@google_api_key_4",
+    "GOOGLE_API_KEY_5": "@google_api_key_5",
+    "GOOGLE_API_KEY_6": "@google_api_key_6",
+    "UPSTASH_REDIS_REST_URL": "@upstash_redis_rest_url",
+    "UPSTASH_REDIS_REST_TOKEN": "@upstash_redis_rest_token",
+    "JUDGE0_API_HOST": "@judge0_api_host"
+  }
+}
