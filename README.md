@@ -85,12 +85,12 @@ Create a `.env.local` file in the root:
 # ─── Google Gemini API Keys (Auto-Rotation) ──────────────────────────────────
 # Add at least one API key. System rotates between keys on failure/rate limits.
 # Get keys from: https://aistudio.google.com/apikey
-GOOGLE_API_KEY_1=
-GOOGLE_API_KEY_2=
-GOOGLE_API_KEY_3=
-GOOGLE_API_KEY_4=
-GOOGLE_API_KEY_5=
-GOOGLE_API_KEY_6=
+GOOGLE_API_KEY_A=
+GOOGLE_API_KEY_B=
+GOOGLE_API_KEY_C=
+GOOGLE_API_KEY_D=
+GOOGLE_API_KEY_E=
+GOOGLE_API_KEY_F=
 
 # ─── Rate Limiting (Upstash Redis) ──────────────────────────────────────────
 # Optional: For production rate limiting. Leave empty for no rate limiting.
@@ -289,7 +289,7 @@ vercel
 1. Push code to GitHub
 2. Go to [Vercel](https://vercel.com) and import your repository
 3. Add environment variables in **Settings → Environment Variables**:
-   - `GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_6` (at least one required)
+   - `GOOGLE_API_KEY_A` through `GOOGLE_API_KEY_F` (at least one required)
    - `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` (optional)
    - `JUDGE0_API_HOST` (optional)
 4. Deploy
@@ -300,8 +300,8 @@ See `DEPLOY.md` for detailed deployment instructions.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `GOOGLE_API_KEY_1` | ✅ Yes | Primary AI API key |
-| `GOOGLE_API_KEY_2-6` | ❌ Optional | Backup keys for auto-rotation |
+| `GOOGLE_API_KEY_A` | ✅ Yes | Primary AI API key |
+| `GOOGLE_API_KEY_B-F` | ❌ Optional | Backup keys for auto-rotation |
 | `UPSTASH_REDIS_REST_URL` | ❌ Optional | Rate limiting (production) |
 | `UPSTASH_REDIS_REST_TOKEN` | ❌ Optional | Rate limiting (production) |
 | `JUDGE0_API_HOST` | ❌ Optional | Code execution (self-hosted Judge0) |

@@ -43,9 +43,12 @@ After deployment, add your API keys in the **Vercel Dashboard**:
 
 | Variable | Value |
 |----------|-------|
-| `GOOGLE_API_KEY_1` | Your first Google Gemini API key |
-| `GOOGLE_API_KEY_2` | (Optional) Second key for rotation |
-| `GOOGLE_API_KEY_3` | (Optional) Third key for rotation |
+| `GOOGLE_API_KEY_A` | Your first Google Gemini API key |
+| `GOOGLE_API_KEY_B` | (Optional) Second key for rotation |
+| `GOOGLE_API_KEY_C` | (Optional) Third key for rotation |
+| `GOOGLE_API_KEY_D` | (Optional) Fourth key for rotation |
+| `GOOGLE_API_KEY_E` | (Optional) Fifth key for rotation |
+| `GOOGLE_API_KEY_F` | (Optional) Sixth key for rotation |
 | `UPSTASH_REDIS_REST_URL` | (Optional) Upstash Redis URL |
 | `UPSTASH_REDIS_REST_TOKEN` | (Optional) Upstash Redis token |
 | `JUDGE0_API_HOST` | (Optional) Judge0 host, e.g., `https://your-judge0-instance.com` |
@@ -64,11 +67,11 @@ vercel --prod
 
 ### Required
 
-- **`GOOGLE_API_KEY_1`** - At least one Google Gemini API key is required for AI features
+- **`GOOGLE_API_KEY_A`** - At least one Google Gemini API key is required for AI features
 
 ### Optional
 
-- **`GOOGLE_API_KEY_2`** through **`GOOGLE_API_KEY_6`** - Additional keys for automatic rotation
+- **`GOOGLE_API_KEY_B`** through **`GOOGLE_API_KEY_F`** - Additional keys for automatic rotation
 - **`UPSTASH_REDIS_REST_URL`** & **`UPSTASH_REDIS_REST_TOKEN`** - For rate limiting (get from [Upstash](https://console.upstash.com))
 - **`JUDGE0_API_HOST`** - For code execution (self-host via Docker: `docker run -p 2358:2358 judge0/judge0`)
 

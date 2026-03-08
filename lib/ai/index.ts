@@ -2,12 +2,12 @@ import { GoogleGenAI } from "@google/genai";
 
 // API Keys for rotation
 const API_KEYS = [
-    process.env.GOOGLE_API_KEY_1 || "",
-    process.env.GOOGLE_API_KEY_2 || "",
-    process.env.GOOGLE_API_KEY_3 || "",
-    process.env.GOOGLE_API_KEY_4 || "",
-    process.env.GOOGLE_API_KEY_5 || "",
-    process.env.GOOGLE_API_KEY_6 || "",
+    process.env.GOOGLE_API_KEY_A || "",
+    process.env.GOOGLE_API_KEY_B || "",
+    process.env.GOOGLE_API_KEY_C || "",
+    process.env.GOOGLE_API_KEY_D || "",
+    process.env.GOOGLE_API_KEY_E || "",
+    process.env.GOOGLE_API_KEY_F || "",
 ].filter(key => key.length > 0);
 
 // Track key usage and errors for rotation
