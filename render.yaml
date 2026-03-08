@@ -3,12 +3,12 @@ services:
   - type: web
     name: devkit-judge0
     env: docker
-    dockerfilePath: ./Dockerfile.judge0
+    dockerfilePath: Dockerfile.judge0
     plan: free
     region: oregon
     branch: main
     autoDeploy: true
-    
+
     # Environment variables for Judge0
     envVars:
       - key: RAILS_ENV
@@ -23,15 +23,15 @@ services:
         value: judge0
       - key: REDIS_URL
         value: redis://localhost:6379
-    
+
     # Persistent disk for PostgreSQL data
     disk:
       name: judge0-postgres-data
       mountPath: /var/lib/postgresql/data
       sizeGB: 1
-    
+
     # Health check
     healthCheckPath: /
-    
+
     # Auto-stop after 15 minutes of inactivity (free tier)
     # Note: Free tier services sleep after inactivity
