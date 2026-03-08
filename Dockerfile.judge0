@@ -1,8 +1,11 @@
-FROM judge0/judge0:1.13.0
+# Use the official Judge0 image
+FROM judge0/judge0:latest
 
-# Expose the default Judge0 port
+# Set working directory
+WORKDIR /app
+
+# Expose port
 EXPOSE 2358
 
-# Health check for Render
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:2358/ || exit 1
+# Start Judge0
+CMD ["./scripts/server"]

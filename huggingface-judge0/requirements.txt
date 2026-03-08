@@ -1,0 +1,2 @@
+# No Python dependencies needed - using Docker image
+# This file is required by Hugging Face Spaces but not used

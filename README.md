@@ -111,7 +111,7 @@ JUDGE0_API_HOST=http://localhost:2358
 | **Google AI Studio** | https://aistudio.google.com/apikey | ✅ 1500 req/day | All AI features |
 | **Upstash Redis** | https://upstash.com/ | ✅ 10k req/day | Rate limiting (optional) |
 | **Judge0 (Local)** | Docker | ✅ Free | Code Runner (local) |
-| **Judge0 (Render)** | https://render.com | ✅ Free tier | Code Runner (production) |
+| **Judge0 (HF Spaces)** | https://huggingface.co/spaces | ✅ Free | Code Runner (production) |
 
 ---
 
@@ -305,7 +305,7 @@ See `DEPLOY.md` for detailed deployment instructions.
 | `GOOGLE_API_KEY_B-F` | ❌ Optional | Backup keys for auto-rotation |
 | `UPSTASH_REDIS_REST_URL` | ❌ Optional | Rate limiting (production) |
 | `UPSTASH_REDIS_REST_TOKEN` | ❌ Optional | Rate limiting (production) |
-| `JUDGE0_API_HOST` | ❌ Optional | Code execution (local: `http://localhost:2358`, production: Render URL) |
+| `JUDGE0_API_HOST` | ❌ Optional | Code execution (local: `http://localhost:2358`, production: Hugging Face Spaces URL) |
 
 ---
 
