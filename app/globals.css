@@ -161,3 +161,24 @@ body {
   font-family: var(--font-geist-mono), monospace;
   line-height: 1.7;
 }
+
+/* ─── AST Explorer Tree ─────────────────────────────────────── */
+.tree-container,
+.tree-container > div,
+.tree-container .rd3t-tree-container,
+.tree-container .rd3t-tree,
+.tree-container svg,
+.tree-container svg g {
+  background: #111118 !important;
+}
+
+/* Force all paths in tree-container to use visible stroke color */
+.tree-container path:not(.node-circle) {
+  stroke: #2a2a3a !important;
+  stroke-width: 2px !important;
+  fill: none !important;
+}
+
+.tree-container .rd3t-node {
+  cursor: pointer;
+}

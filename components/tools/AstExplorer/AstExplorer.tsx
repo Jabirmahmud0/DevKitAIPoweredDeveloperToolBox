@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { parse } from "@babel/parser";
-import { GitMerge, Map, Wand2, MonitorPlay, AlertTriangle } from "lucide-react";
+import { GitMerge, Wand2, MonitorPlay, AlertTriangle } from "lucide-react";
 import { useCompletion } from "ai/react";
 import { useToolStore } from "@/lib/stores/useToolStore";
 
@@ -12,10 +12,14 @@ const Tree = dynamic(() => import("react-d3-tree"), { ssr: false });
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 // Helper to format Babel AST for react-d3-tree
+const nodeMap = new Map<string, any>();
+let nodeIdCounter = 0;
+
 function mapAstToTree(node: any, name = "Program"): any {
     if (!node || typeof node !== "object") return null;
 
     const children: any[] = [];
+    const nodeId = `node-${nodeIdCounter++}`;
 
     // Extract meaningful properties to show in the tree node's attributes
     const attributes: Record<string, string> = {};
@@ -40,12 +44,17 @@ function mapAstToTree(node: any, name = "Program"): any {
         }
     }
 
-    return {
+    const treeNode = {
         name: node.type || name,
         attributes,
         children: children.length > 0 ? children : undefined,
-        _rawNode: node // keep reference for AI explain
+        nodeId,
     };
+    
+    // Store the raw node in the map for later retrieval
+    nodeMap.set(nodeId, node);
+    
+    return treeNode;
 }
 
 export default function AstExplorer() {
@@ -64,6 +73,9 @@ export default function AstExplorer() {
     useEffect(() => {
         try {
             setError(null);
+            nodeIdCounter = 0;
+            nodeMap.clear();
+            
             const parsed = parse(code, {
                 sourceType: "module",
                 plugins: ["typescript", "jsx"],
@@ -80,13 +92,6 @@ export default function AstExplorer() {
             setTreeData(null);
         }
     }, [code]);
-
-    const handleNodeClick = (nodeDatum: any) => {
-        setCompletion(""); // clear past AI explanations
-        if (nodeDatum.data && nodeDatum.data._rawNode) {
-            setSelectedNode(nodeDatum.data._rawNode);
-        }
-    };
 
     const explainSelectedNode = () => {
         if (!selectedNode || !code) return;
@@ -120,7 +125,7 @@ export default function AstExplorer() {
             {/* Topbar */}
             <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-elevated)] border-b border-[var(--border)] shrink-0">
                 <div className="flex items-center gap-2 font-semibold text-sm text-[var(--accent)]">
-                    <Map size={16} /> AST Explorer
+                    <GitMerge size={16} /> AST Explorer
                 </div>
                 {error && (
                     <div className="flex items-center gap-2 text-red-500 text-xs font-semibold bg-red-500/10 px-3 py-1 rounded-full">
@@ -145,14 +150,14 @@ export default function AstExplorer() {
                     </div>
 
                     {/* Node Inspector */}
-                    <div className="h-1/2 flex flex-col bg-[#1e1e1e] relative">
-                        <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-surface)] border-b border-[#333] shrink-0">
-                            <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Node Inspector</span>
+                    <div className="h-1/2 flex flex-col bg-[#111118] relative">
+                        <div className="flex items-center justify-between px-3 py-2 bg-[#1a1a24] border-b border-[#2a2a3a] shrink-0">
+                            <span className="text-xs font-semibold text-[#9090aa] uppercase tracking-wide">Node Inspector</span>
                             {selectedNode && (
                                 <button
                                     onClick={explainSelectedNode}
                                     disabled={aiLoading}
-                                    className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:opacity-80 transition-opacity"
+                                    className="flex items-center gap-1.5 text-xs text-[#7c6af5] hover:opacity-80 transition-opacity"
                                 >
                                     {aiLoading ? <MonitorPlay size={14} className="animate-pulse" /> : <Wand2 size={14} />} AI Explain
                                 </button>
@@ -162,8 +167,16 @@ export default function AstExplorer() {
                             {selectedNode ? (
                                 <div className="flex flex-col h-full">
                                     {/* AI completion */}
-                                    {completion && (
-                                        <div className="p-3 bg-[var(--bg-elevated)] border-b border-[#333] text-xs font-sans text-[var(--text-secondary)] leading-relaxed border-l-2 border-l-[var(--accent)]">
+                                    {aiLoading && (
+                                        <div className="p-3 bg-[#1a1a24] border-b border-[#2a2a3a] text-xs font-sans text-[#9090aa] leading-relaxed border-l-2 border-l-[#7c6af5] animate-pulse">
+                                            <div className="flex items-center gap-2">
+                                                <MonitorPlay size={14} className="animate-spin" />
+                                                <span>AI is analyzing the node...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {completion && !aiLoading && (
+                                        <div className="p-3 bg-[#1a1a24] border-b border-[#2a2a3a] text-xs font-sans text-[#9090aa] leading-relaxed border-l-2 border-l-[#7c6af5]">
                                             {completion}
                                         </div>
                                     )}
@@ -178,7 +191,7 @@ export default function AstExplorer() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] text-sm italic font-mono p-4 text-center">
+                                <div className="h-full flex flex-col items-center justify-center text-[#555570] text-sm italic font-mono p-4 text-center">
                                     Click a node in the tree<br />to inspect its properties.
                                 </div>
                             )}
@@ -187,38 +200,82 @@ export default function AstExplorer() {
                 </div>
 
                 {/* Right Panel: Interactive Tree */}
-                <div className="flex-1 bg-[var(--bg-surface)] relative overflow-hidden flex items-center justify-center">
+                <div className="flex-1 bg-[#111118] relative overflow-hidden flex items-center justify-center">
                     {treeData ? (
-                        <div className="w-full h-full">
+                        <div className="w-full h-full tree-container" style={{ background: '#111118' }}>
                             <Tree
                                 data={treeData}
                                 orientation="vertical"
                                 pathFunc="step"
                                 translate={{ x: 300, y: 50 }}
-                                onNodeClick={handleNodeClick}
-                                nodeSize={{ x: 200, y: 100 }}
-                                renderCustomNodeElement={({ nodeDatum, toggleNode }) => (
-                                    <g>
-                                        <circle r="12" fill="var(--accent)" onClick={toggleNode} className="cursor-pointer hover:fill-blue-500" />
-                                        <text fill="var(--text-primary)" strokeWidth="1" x="20" dy="5" fontSize="12px" fontFamily="monospace">
-                                            {nodeDatum.name}
-                                        </text>
-                                        {nodeDatum.attributes?.name && (
-                                            <text fill="var(--text-muted)" x="20" dy="20" fontSize="10px" fontFamily="monospace">
-                                                name: {nodeDatum.attributes.name}
-                                            </text>
-                                        )}
-                                        {nodeDatum.attributes?.value && (
-                                            <text fill="var(--text-muted)" x="20" dy="20" fontSize="10px" fontFamily="monospace">
-                                                value: {nodeDatum.attributes.value}
-                                            </text>
-                                        )}
-                                    </g>
-                                )}
+                                nodeSize={{ x: 200, y: 80 }}
+                                separation={{ siblings: 1.5, nonSiblings: 2.5 }}
+                                renderCustomNodeElement={(rd3tProps) => {
+                                    const { nodeDatum, toggleNode } = rd3tProps;
+                                    
+                                    // Get nodeId from the node - try different possible locations
+                                    const nodeId = (nodeDatum as any).nodeId || (nodeDatum as any).data?.nodeId;
+                                    const rawNode = nodeId ? nodeMap.get(nodeId) : null;
+                                    
+                                    const handleClick = (e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        if (rawNode) {
+                                            setCompletion("");
+                                            setSelectedNode(rawNode);
+                                        }
+                                        toggleNode();
+                                    };
+                                    
+                                    return (
+                                        <g
+                                            onClick={handleClick}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <foreignObject width="150" height="50">
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        background: '#1a1a24',
+                                                        padding: '6px 10px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid #2a2a3a',
+                                                        minWidth: '100px',
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            width: '12px',
+                                                            height: '12px',
+                                                            borderRadius: '50%',
+                                                            background: '#7c6af5',
+                                                            border: '2px solid #9580ff',
+                                                            flexShrink: 0,
+                                                        }}
+                                                    />
+                                                    <span
+                                                        style={{
+                                                            color: '#f0f0ff',
+                                                            fontSize: '12px',
+                                                            fontFamily: 'monospace',
+                                                            fontWeight: 600,
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }}
+                                                    >
+                                                        {(nodeDatum as any).name || (nodeDatum as any).nodeDatum?.name}
+                                                    </span>
+                                                </div>
+                                            </foreignObject>
+                                        </g>
+                                    );
+                                }}
                             />
                         </div>
                     ) : (
-                        <div className="text-[var(--text-muted)] font-mono text-sm opacity-50 flex items-center gap-2">
+                        <div className="text-[#555570] font-mono text-sm opacity-50 flex items-center gap-2">
                             {error ? "Tree building failed due to syntax error." : "Building tree..."}
                         </div>
                     )}

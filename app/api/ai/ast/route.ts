@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { generateJson } from "@/lib/ai";
+import { generateStreamingText } from "@/lib/ai";
 import { aiLimiter } from "@/lib/ratelimit";
 
 const SYSTEM_PROMPT = `You are an AST explanation expert.
@@ -23,23 +23,37 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { codeSnippet, nodeJson } = body;
+        const { codeSnippet, nodeJson, model } = body;
 
         if (!nodeJson) {
             return new Response(JSON.stringify({ error: "Node JSON is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
         }
 
         const prompt = `Explain this AST node${codeSnippet ? ` from the following code:\n\n\`\`\`typescript\n${codeSnippet}\n\`\`\`` : ""}:\n\n${nodeJson}`;
-        
-        try {
-            const explanation = await generateJson<{ explanation: string }>(prompt, SYSTEM_PROMPT);
-            return new Response(JSON.stringify(explanation), { headers: { "Content-Type": "application/json" } });
-        } catch (parseError) {
-            return new Response(JSON.stringify({ error: "Failed to explain AST node" }), { status: 500, headers: { "Content-Type": "application/json" } });
-        }
+
+        // Map model names to actual Gemini model names
+        const modelMap: Record<string, string> = {
+            "gemini": "gemini-2.5-flash",
+            "gemini-2.5-flash": "gemini-2.5-flash",
+        };
+        const selectedModel = modelMap[model || "gemini"] || "gemini-2.5-flash";
+
+        // Get the streaming response
+        const aiStream = await generateStreamingText(prompt, SYSTEM_PROMPT, selectedModel);
+
+        return new Response(aiStream, {
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "X-Vercel-AI-Data-Stream": "v1",
+            },
+        });
 
     } catch (error) {
         console.error("[AST AI Error]:", error);
-        return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+        const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+        return new Response(JSON.stringify({ error: errorMessage }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
     }
 }
