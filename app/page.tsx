@@ -54,6 +54,7 @@ export default function DevKitPage() {
   const { activeToolId } = useToolStore();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const tool = TOOL_MAP[activeToolId];
   const ActiveTool = TOOL_COMPONENTS[activeToolId];
 
@@ -80,10 +81,7 @@ export default function DevKitPage() {
           {/* Action buttons */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => {
-                const ev = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true });
-                window.dispatchEvent(ev);
-              }}
+              onClick={() => setCommandPaletteOpen(true)}
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all"
             >
               <CommandIcon size={12} />
@@ -162,7 +160,11 @@ export default function DevKitPage() {
       </main>
 
       {/* Overlays */}
-      <CommandPalette />
+      <CommandPalette 
+        isOpen={commandPaletteOpen} 
+        onToggle={() => setCommandPaletteOpen(prev => !prev)} 
+        onClose={() => setCommandPaletteOpen(false)} 
+      />
       <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>

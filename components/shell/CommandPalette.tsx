@@ -7,27 +7,32 @@ import { Search, Terminal } from "lucide-react";
 import { TOOLS } from "@/lib/tools";
 import { useToolStore } from "@/lib/stores/useToolStore";
 
-export function CommandPalette() {
-    const [open, setOpen] = useState(false);
+interface CommandPaletteProps {
+    isOpen: boolean;
+    onToggle: () => void;
+    onClose: () => void;
+}
+
+export function CommandPalette({ isOpen, onToggle, onClose }: CommandPaletteProps) {
     const [query, setQuery] = useState("");
     const { setActiveTool } = useToolStore();
 
-    // Cmd+K to open
+    // Cmd+K to toggle
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
-                setOpen((prev) => !prev);
+                onToggle();
             }
-            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Escape") onClose();
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, []);
+    }, [onToggle, onClose]);
 
     function handleSelect(toolId: string) {
         setActiveTool(toolId as ReturnType<typeof useToolStore.getState>["activeToolId"]);
-        setOpen(false);
+        onClose();
         setQuery("");
     }
 
@@ -40,7 +45,7 @@ export function CommandPalette() {
 
     return (
         <AnimatePresence>
-            {open && (
+            {isOpen && (
                 <>
                     {/* Backdrop */}
                     <motion.div
@@ -48,7 +53,7 @@ export function CommandPalette() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => setOpen(false)}
+                        onClick={onClose}
                     />
 
                     {/* Palette */}
